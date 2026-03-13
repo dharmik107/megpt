@@ -47,6 +47,26 @@
 - **Tech Stack**: Python, FastAPI, LangGraph, LangChain, Pinecone, NeonDB, Groq LLM.
 - **GitHub**: [github.com/dharmik107/repopilot](https://github.com/dharmik107/repopilot)
 
+### 3. MeGPT: Personal AI Agent Project
+- Developed a personalized AI assistant that functions as a digital clone using RAG.
+- Integrates personal data embeddings with an interactive multi-agent backend.
+- **Tech Stack**: Python, FastAPI, LangChain, ChromaDB/FAISS, React.
+
+### 4. SQLSensei: Optimized SQL Agent
+- Developed an optimized SQL agent focusing on live SQL execution via tool-calling to prevent hallucinations.
+- Tuned agent prompts for speed, accuracy, and providing direct robust answers.
+- **Tech Stack**: Python, Microsoft AutoGen, SQL.
+
+### 5. PersonaGPT: AI Assistant System
+- Created a personal AI assistant that answers questions based on user-fed information.
+- Features exception handling and persistent chat history.
+- **Tech Stack**: Python, FastAPI, Microsoft AutoGen, ChromaDB, MongoDB, React.
+
+### 6. AiMystara / MystaraAI: Corporate AI Websites
+- Designed and built modern, clean, Microsoft-style corporate websites for AI agencies.
+- Deployed platforms featuring responsive UI and clean design systems.
+- **Tech Stack**: React, Vite, CSS.
+
 ## Certifications
 - **GenAI Certification Bootcamp 2.0**: Completed a comprehensive bootcamp focused on Generative AI technologies and implementation.
 
