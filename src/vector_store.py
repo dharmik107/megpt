@@ -5,9 +5,13 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-def create_vector_store(file_path="data/about_me.txt", db_path="faiss_index"):
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DEFAULT_FILE_PATH = os.path.join(BASE_DIR, "data", "about_me.txt")
+DEFAULT_DB_PATH = os.path.join(BASE_DIR, "faiss_index")
+
+def create_vector_store(file_path=DEFAULT_FILE_PATH, db_path=DEFAULT_DB_PATH):
     """
     Loads text, creates embeddings, and saves to a FAISS index.
     """
@@ -29,17 +33,18 @@ def create_vector_store(file_path="data/about_me.txt", db_path="faiss_index"):
     print(f"Vector store created and saved to {db_path}")
     return vector_store
 
-def get_vector_store(db_path="faiss_index"):
+def get_vector_store(db_path=DEFAULT_DB_PATH):
     """
-    Loads the FAISS index from local storage.
+    Loads the FAISS index from local storage, or creates it if missing.
     """
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     if os.path.exists(db_path):
         return FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
     else:
-        return None
+        print(f"Index {db_path} not found. Creating it automatically...")
+        return create_vector_store(db_path=db_path)
 
-def query_vector_store(query, db_path="faiss_index", k=2):
+def query_vector_store(query, db_path=DEFAULT_DB_PATH, k=2):
     """
     Queries the vector store for relevant documents.
     """

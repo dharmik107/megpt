@@ -64,9 +64,6 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 if 'messages' not in st.session_state:
     st.session_state.messages = []
 
-if 'vector_store_ready' not in st.session_state:
-    st.session_state.vector_store_ready = os.path.exists("faiss_index")
-
 # Sidebar
 with st.sidebar:
     st.markdown("### Contact Details")
