@@ -30,7 +30,8 @@ def retrieve_and_verify(user_query):
     Retrieves info -> Verifies relevance (using ChatGroq) -> Re-retrieves if necessary.
     """
     print(f"\n[System] Searching for: {user_query}")
-    retrieved_info = query_vector_store(user_query, k=3)
+    # Increased initial retrieval depth to ensure we capture spread-out lists (like projects)
+    retrieved_info = query_vector_store(user_query, k=5)
     
     # Verification prompt
     verification_prompt = f"""
@@ -52,8 +53,8 @@ def retrieve_and_verify(user_query):
     
     if not is_correct:
         print("[System] Information was not sufficient. Attempting deeper retrieval...")
-        # Increase k for better coverage if initial retrieval fails
-        retrieved_info = query_vector_store(user_query, k=6)
+        # Deep search to pull a very broad context if the initial one failed
+        retrieved_info = query_vector_store(user_query, k=10)
     
     return retrieved_info
 
@@ -63,7 +64,7 @@ def run_rag_chat(user_query):
     """
     # 1. Retrieve and Verify (The Agentic part)
     context = retrieve_and_verify(user_query)
-    
+        
     # 2. Generate Final Answer (The Assistant part)
     # Inject current date context to prevent "knowledge cutoff" explanations
     from datetime import datetime
@@ -74,11 +75,12 @@ def run_rag_chat(user_query):
     Current Date: {current_date}
     
     INSTRUCTIONS:
-    - Answer the User Question using the provided Context.
-    - Be extremely concise, direct, and professional.
-    - If asked about age, calculate it accurately using the Date of Birth in the context and today's date ({current_date}).
-    - Format age responses simply, like: "As the date of birth is August 15, 2005, the age of Dharmik is 21."
-    - Do NOT mention "knowledge cutoffs", "databases", or "retrieved information".
+    - Answer the User Question using ONLY the provided Context.
+    - Be extremely thorough: If the user asks for a list (like projects or skills), extract and list EVERYTHING mentioned in the context. Do not stop at just one item.
+    - Be concise, direct, and professional in your delivery. Let the data speak for itself.
+    - If asked about age, calculate it accurately using the Date of Birth in the context and today's date ({current_date}). Format it clearly (e.g., "As the date of birth is August 15, 2005, the age of Dharmik is 21.")
+    - Do NOT mention "knowledge cutoffs", "databases", or "retrieved information" to the user.
+    - If the context doesn't contain the answer at all, politely state you don't have that specific information about Dharmik.
     
     Context:
     {context}
