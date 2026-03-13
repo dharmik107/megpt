@@ -24,74 +24,55 @@ llm = ChatGroq(
     temperature=0.0
 )
 
-def retrieve_and_verify(user_query):
-    """
-    Agentic RAG Logic:
-    Retrieves info -> Verifies relevance (using ChatGroq) -> Re-retrieves if necessary.
-    """
-    print(f"\n[System] Searching for: {user_query}")
-    # Increased initial retrieval depth to ensure we capture spread-out lists (like projects)
-    retrieved_info = query_vector_store(user_query, k=5)
-    
-    # Verification prompt
-    verification_prompt = f"""
-    You are a strict data verifier for Dharmik's Assistant.
-    
-    User Query: {user_query}
-    Retrieved Information from Database: {retrieved_info}
-    
-    Task: Is the retrieved information relevant and sufficient to answer the User Query accurately?
-    Respond with ONLY 'YES' or 'NO'.
-    """
-    
-    try:
-        response = llm.invoke(verification_prompt)
-        is_correct = response.content.strip().upper() == "YES"
-    except Exception as e:
-        print(f"[Warning] Verification failed: {e}. Defaulting to YES.")
-        is_correct = True
-    
-    if not is_correct:
-        print("[System] Information was not sufficient. Attempting deeper retrieval...")
-        # Deep search to pull a very broad context if the initial one failed
-        retrieved_info = query_vector_store(user_query, k=10)
-    
-    return retrieved_info
-
 def run_rag_chat(user_query):
     """
-    Main entry point for the agentic chat logic.
+    Main entry point for the chat logic. Optimized for speed by removing
+    unnecessary verification round-trips.
     """
-    # 1. Retrieve and Verify (The Agentic part)
-    context = retrieve_and_verify(user_query)
+    # 1. Retrieve Info Directly (Optimized k for reliability)
+    print(f"\n[System] Searching for: {user_query}")
+    context = query_vector_store(user_query, k=5)
         
     # 2. Generate Final Answer (The Assistant part)
-    # Inject current date context to prevent "knowledge cutoff" explanations
     from datetime import datetime
     current_date = datetime.now().strftime("%B %d, %Y")
     
-    final_prompt = f"""
-    You are MeGPT, the personal assistant representing Dharmik Pansuriya.
-    Current Date: {current_date}
-    
-    INSTRUCTIONS:
-    - Answer the User Question using ONLY the provided Context.
-    - Be extremely thorough: If the user asks for a list (like projects or skills), extract and list EVERYTHING mentioned in the context. Do not stop at just one item.
-    - Be concise, direct, and professional in your delivery. Let the data speak for itself.
-    - If asked about age, calculate it accurately using the Date of Birth in the context and today's date ({current_date}). Format it clearly (e.g., "As the date of birth is August 15, 2005, the age of Dharmik is 21.")
-    - Do NOT mention "knowledge cutoffs", "databases", or "retrieved information" to the user.
-    - If the context doesn't contain the answer at all, politely state you don't have that specific information about Dharmik.
-    
-    Context:
+    # Using a more direct and concise prompt
+    system_message = f"""
+    You are MeGPT, the digital assistant for Dharmik Pansuriya. 
+    Your goal is to provide **short, on-point, and clean** answers based ONLY on the provided context.
+
+    RULES:
+    1. **Be Concise**: Never use 10 words if 5 will do. Avoid fluff, unnecessary introductions, or concluding summaries.
+    2. **On-Point**: Answer ONLY what is asked. Do not provide extra information or unsolicited recommendations.
+    3. **Format Cleanly**: Use bullet points for lists and bolding for key terms. Keep it readable.
+    4. **Source Only**: Use only the provided context. If not found, say you don't know.
+    5. **No Meta-Talk**: Do not mention "context", "database", or "cutoffs".
+    6. **Persona**: Stay professional and efficient.
+
+    Today's Date: {current_date}
+    """
+
+    human_message = f"""
+    Context Info:
+    ---
     {context}
-    
+    ---
+
     User Question: {user_query}
-    
-    Assistant Response:
+
+    Provide a short, direct response:
     """
     
     try:
-        res = llm.invoke(final_prompt)
+        # Construct messages for ChatGroq
+        from langchain_core.messages import SystemMessage, HumanMessage
+        messages = [
+            SystemMessage(content=system_message.strip()),
+            HumanMessage(content=human_message.strip())
+        ]
+        
+        res = llm.invoke(messages)
         return res.content.strip()
     except Exception as e:
         return f"An error occurred while generating the answer: {e}"
