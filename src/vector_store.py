@@ -21,11 +21,33 @@ def create_vector_store(file_path=DEFAULT_FILE_PATH, db_path=DEFAULT_DB_PATH):
     # Load and split documents
     loader = TextLoader(file_path)
     documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    text_splitter = CharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
     docs = text_splitter.split_documents(documents)
 
-    # Create embeddings using a reliable HuggingFace model
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+# Cache embeddings model globally to prevent reloading on every query
+_embeddings_instance = None
+
+def get_embeddings():
+    global _embeddings_instance
+    if _embeddings_instance is None:
+        _embeddings_instance = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return _embeddings_instance
+
+def create_vector_store(file_path=DEFAULT_FILE_PATH, db_path=DEFAULT_DB_PATH):
+    """
+    Loads text, creates embeddings, and saves to a FAISS index.
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Source file {file_path} not found.")
+
+    # Load and split documents
+    loader = TextLoader(file_path)
+    documents = loader.load()
+    text_splitter = CharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
+    docs = text_splitter.split_documents(documents)
+
+    # Use cached embeddings
+    embeddings = get_embeddings()
 
     # Create and save FAISS index
     vector_store = FAISS.from_documents(docs, embeddings)
@@ -37,14 +59,14 @@ def get_vector_store(db_path=DEFAULT_DB_PATH):
     """
     Loads the FAISS index from local storage, or creates it if missing.
     """
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embeddings = get_embeddings()
     if os.path.exists(db_path):
         return FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
     else:
         print(f"Index {db_path} not found. Creating it automatically...")
         return create_vector_store(db_path=db_path)
 
-def query_vector_store(query, db_path=DEFAULT_DB_PATH, k=2):
+def query_vector_store(query, db_path=DEFAULT_DB_PATH, k=4):
     """
     Queries the vector store for relevant documents.
     """
