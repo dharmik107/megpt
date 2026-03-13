@@ -1,6 +1,6 @@
 # 🤖 MeGPT: Personal AI Assistant
 
-MeGPT is a **Retrieval-Augmented Generation (RAG)** based AI assistant designed to represent Dharmik Pansuriya. It uses a custom vectorized knowledge base and an agentic verification flow to answer personal, educational, and professional queries with high accuracy and a definitive persona.
+MeGPT is a **Retrieval-Augmented Generation (RAG)** based AI assistant designed to represent myself. It uses a custom vectorized knowledge base and an agentic verification flow to answer personal, educational, and professional queries with high accuracy and a definitive persona.
 
 ---
 
@@ -15,8 +15,8 @@ MeGPT is a **Retrieval-Augmented Generation (RAG)** based AI assistant designed 
 
 ## 🏗️ Architecture Stack
 
-- **Large Language Model**: Groq (`llama-3.1-8b-instant`)
-- **LLM Orchestration**: LangChain (`langchain-groq`)
+- **Large Language Model**: Groq 
+- **LLM Orchestration**: LangChain 
 - **Vector Database (Embeddings)**: FAISS (`faiss-cpu`) + HuggingFace Models
 - **Frontend**: Streamlit
 - **Language**: Python 3.10+
@@ -29,7 +29,7 @@ MeGPT is a **Retrieval-Augmented Generation (RAG)** based AI assistant designed 
 megpt/
 │
 ├── data/
-│   └── about_me.txt         # The core knowledge base describing Dharmik
+│   └── about_me.txt         # The core knowledge base describing Myself
 ├── frontend/
 │   └── app.py               # Streamlit UI implementation
 ├── src/
