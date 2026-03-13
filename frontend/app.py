@@ -85,8 +85,16 @@ for message in st.session_state.messages:
 
 # User Input
 if prompt := st.chat_input("What would you like to know?"):
-    if not os.environ.get("GROQ_API_KEY"):
-        st.error("GROQ_API_KEY is missing in .env file!")
+    has_api_key = False
+    try:
+         if "GROQ_API_KEY" in st.secrets or os.environ.get("GROQ_API_KEY"):
+             has_api_key = True
+    except Exception:
+         if os.environ.get("GROQ_API_KEY"):
+             has_api_key = True
+
+    if not has_api_key:
+        st.error("GROQ_API_KEY is missing! Please configure it in your deployment settings or .env file.")
     else:
         # Add user message to state
         st.session_state.messages.append({"role": "user", "content": prompt})

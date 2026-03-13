@@ -5,11 +5,22 @@ from langchain_groq import ChatGroq
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
+def get_api_key():
+    import streamlit as st
+    try:
+        # Try Streamlit secrets first (for deployment)
+        if "GROQ_API_KEY" in st.secrets:
+            return st.secrets["GROQ_API_KEY"]
+    except Exception:
+        pass
+    
+    # Fallback to local .env
+    return os.environ.get("GROQ_API_KEY")
+
 # Initialize LangChain ChatGroq as requested by the user
-# This removes the need for the 'openai' dependency required by AutoGen
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
-    groq_api_key=os.environ.get("GROQ_API_KEY"),
+    groq_api_key=get_api_key(),
     temperature=0.0
 )
 
@@ -85,5 +96,5 @@ def run_rag_chat(user_query):
 
 if __name__ == "__main__":
     # Test
-    if os.environ.get("GROQ_API_KEY"):
+    if get_api_key():
         print(run_rag_chat("What is Dharmik's passion?"))
