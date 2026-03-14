@@ -4,7 +4,7 @@ from src.vector_store import create_vector_store
 from src.agents import run_rag_chat
 
 load_dotenv()
-
+ 
 def main():
     print("--- Welcome to MeGPT (Dharmik's Assistant) ---")
     
