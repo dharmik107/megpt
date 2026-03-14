@@ -8,7 +8,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 def get_api_key():
     import streamlit as st
     try:
-        # Try Streamlit secrets first (for deployment)
+        # Try Streamlit secrets first (for deployment) 
         if "GROQ_API_KEY" in st.secrets:
             return st.secrets["GROQ_API_KEY"]
     except Exception:
