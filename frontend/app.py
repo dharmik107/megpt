@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import sys
 from dotenv import load_dotenv
-
+  
 # Add the parent directory to sys.path to allow imports from other folders
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
