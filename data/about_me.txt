@@ -51,6 +51,7 @@
 - Integrates personal data embeddings with an interactive multi-agent backend.
 - **Tech Stack**: Python, FastAPI, LangChain, ChromaDB/FAISS, React.
 
+
 ## Certifications
 - **GenAI Certification Bootcamp 2.0**: Completed a comprehensive bootcamp focused on Generative AI technologies and implementation.
 

@@ -18,15 +18,21 @@ def main():
         print("Please update your .env file with a valid API key.")
         return
 
+    from langchain_community.chat_message_histories import ChatMessageHistory
+    history = ChatMessageHistory()
+
     while True:
         query = input("\nAsk something about Dharmik (or type 'exit' to quit): ")
         if query.lower() in ['exit', 'quit', 'bye']:
             break
         
         try:
-            run_rag_chat(query)
+            # Pass history to maintain conversation context
+            response = run_rag_chat(query, history)
+            print(f"\nAI: {response}")
         except Exception as e:
             print(f"An error occurred: {e}")
+
 
 if __name__ == "__main__":
     main()

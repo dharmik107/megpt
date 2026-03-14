@@ -61,8 +61,10 @@ st.markdown("""
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 # Initialization
-if 'messages' not in st.session_state:
-    st.session_state.messages = []
+if 'history' not in st.session_state:
+    from langchain_community.chat_message_histories import ChatMessageHistory
+    st.session_state.history = ChatMessageHistory()
+
 
 # Sidebar
 with st.sidebar:
@@ -76,9 +78,12 @@ st.title("🤖 MeGPT Assistant")
 st.markdown("Ask anything about Dharmik's education, projects, or background.")
 
 # Display chat history
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+from langchain_core.messages import HumanMessage
+for message in st.session_state.history.messages:
+    role = "user" if isinstance(message, HumanMessage) else "assistant"
+    with st.chat_message(role):
+        st.markdown(message.content)
+
 
 # User Input
 if prompt := st.chat_input("What would you like to know?"):
@@ -93,20 +98,19 @@ if prompt := st.chat_input("What would you like to know?"):
     if not has_api_key:
         st.error("GROQ_API_KEY is missing! Please configure it in your deployment settings or .env file.")
     else:
-        # Add user message to state
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        # Display user message
         with st.chat_message("user"):
             st.markdown(prompt)
+
 
         # Generate Assistant response
         with st.chat_message("assistant"):
             status_placeholder = st.empty()
             with st.spinner("Agents are retrieving and verifying info..."):
                 try:
-                    # In a real app, you might want to stream logs from agents
-                    response = run_rag_chat(prompt)
+                    response = run_rag_chat(prompt, st.session_state.history)
                     st.markdown(response)
-                    st.session_state.messages.append({"role": "assistant", "content": response})
+
                 except Exception as e:
                     st.error(f"Error: {e}")
 
