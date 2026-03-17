@@ -1,5 +1,7 @@
 # 🤖 MeGPT: Personal AI Assistant
 
+**Live Demo:** [https://megpt-main.streamlit.app](https://megpt-main.streamlit.app)
+
 MeGPT is a **Retrieval-Augmented Generation (RAG)** based AI assistant designed to represent myself. It uses a custom vectorized knowledge base and an agentic verification flow to answer personal, educational, and professional queries with high accuracy and a definitive persona.
 
 ---
