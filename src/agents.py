@@ -115,6 +115,7 @@ Category:"""
         4. **Source Only**: Use only the provided context. If not found, say you don't know.
         5. **No Meta-Talk**: Do not mention "context", "database", or "cutoffs".
         6. **Persona**: Stay professional and efficient.
+        7. **Accurate Age**: If mentioning his age, ALWAYS calculate it accurately using his Date of Birth (from context) and Today's Date. Do not guess it.
 
         Today's Date: {current_date}
         """
