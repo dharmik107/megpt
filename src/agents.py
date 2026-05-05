@@ -29,59 +29,48 @@ def run_rag_chat(user_query, history=None):
 
     print(f"\n[System] Original Query: {user_query}")
     
-    # 1. Reformulate Query if history exists to resolve pronouns (e.g., "it")
+    # 1. & 1.5. Reformulate and Classify in ONE call (Major speedup)
     search_query = user_query
+    category = "PERSONAL"
     previous_messages = history.messages[-10:] # Last 5 turns approx
     
+    # Build history context
+    history_text = ""
     if previous_messages:
-        try:
-            # Build history text for reformulation
-            history_text = ""
-            for msg in previous_messages:
-                role = "User" if isinstance(msg, HumanMessage) else "Assistant"
-                history_text += f"{role}: {msg.content}\n"
-            
-            reformulate_prompt = f"""Given the following conversation history and a follow-up question, rephrase the follow-up question to be a **standalone question**.
+        for msg in previous_messages:
+            role = "User" if isinstance(msg, HumanMessage) else "Assistant"
+            history_text += f"{role}: {msg.content}\n"
 
-RULES:
-1. **Pronoun Resolution**: If the question uses pronouns ("it", "he", "she", "that", "the project"), replace them with the actual subject from the history.
-2. **Independence**: If the question is independent of the history (e.g., general knowledge, math, cities), return it **EXACTLY as-is**. Do NOT force a connection to the history or append "in context".
-3. **No Answers**: Do NOT answer the question, just rephrase it.
-
-History:
-{history_text}
-
-Follow-up Question: {user_query}
-Standalone Question:"""
-            
-            # Use same LLM for fast reformulation
-            reform_res = llm.invoke([HumanMessage(content=reformulate_prompt.strip())])
-            search_query = reform_res.content.strip().split("\n")[0].strip() # Take first line to be safe
-            print(f"[System] Reformulated Search Query: {search_query}")
-        except Exception as e:
-            print(f"[System Warning] Failed to reformulate query: {e}")
-            search_query = user_query
-
-    # 1.5. Classify Query (Personal vs General)
-    is_personal = True
     try:
-        classification_prompt = f"""Classify the following question as:
-- 'PERSONAL': About Dharmik Pansuriya (skills, projects, background, salary expectations, preferences, job requirements).
-- 'GENERAL': Any other general topic (geography, math, generic coding, common facts).
-
-Response MUST be just one word: PERSONAL or GENERAL.
-
-Question: {search_query}
-Category:"""
-        class_res = llm.invoke([HumanMessage(content=classification_prompt.strip())])
-        category = class_res.content.strip().upper()
-        # Flexibly match to avoid strict formatting index issues
-        is_personal = "GENERAL" not in category or \
-                      any(kw in search_query.lower().split() for kw in ["dharmik", "his", "he", "your"]) or \
-                      any(term in search_query.lower() for term in ["hirenova", "repopilot", "megpt"])
-        print(f"[System] Category: {'PERSONAL' if is_personal else 'GENERAL'}")
+        combined_prompt = f"""Analyze the following conversation history and the new question.
+        
+        1. **Reformulate**: Rephrase the question to be standalone (resolve pronouns like 'it', 'he'). If independent, keep it as-is.
+        2. **Classify**: Is this about Dharmik Pansuriya (skills, projects, background) -> 'PERSONAL' or a general topic -> 'GENERAL'?
+        
+        History:
+        {history_text if history_text else "None"}
+        
+        New Question: {user_query}
+        
+        Response format:
+        REFORMULATED_QUESTION: [standalone question]
+        CATEGORY: [PERSONAL or GENERAL]"""
+        
+        res = llm.invoke([HumanMessage(content=combined_prompt.strip())])
+        lines = res.content.strip().split("\n")
+        
+        for line in lines:
+            if "REFORMULATED_QUESTION:" in line.upper():
+                search_query = line.split(":", 1)[1].strip()
+            if "CATEGORY:" in line.upper():
+                category = line.split(":", 1)[1].strip().upper()
+        
+        is_personal = "GENERAL" not in category
+        print(f"[System] Optimized Routing -> Category: {category}, Query: {search_query}")
+        
     except Exception as e:
-        print(f"[System Warning] Classification failed: {e}")
+        print(f"[System Warning] Optimized routing failed: {e}")
+        is_personal = True
 
     # 2. Retrieve Info (Conditional)
     context = ""

@@ -24,8 +24,9 @@ def create_vector_store(file_path=DEFAULT_FILE_PATH, db_path=DEFAULT_DB_PATH):
     text_splitter = CharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
     docs = text_splitter.split_documents(documents)
 
-# Cache embeddings model globally to prevent reloading on every query
+# Cache embeddings and vector store globally
 _embeddings_instance = None
+_vector_store_instance = None
 
 def get_embeddings():
     global _embeddings_instance
@@ -37,6 +38,7 @@ def create_vector_store(file_path=DEFAULT_FILE_PATH, db_path=DEFAULT_DB_PATH):
     """
     Loads text, creates embeddings, and saves to a FAISS index.
     """
+    global _vector_store_instance
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Source file {file_path} not found.")
 
@@ -50,18 +52,23 @@ def create_vector_store(file_path=DEFAULT_FILE_PATH, db_path=DEFAULT_DB_PATH):
     embeddings = get_embeddings()
 
     # Create and save FAISS index
-    vector_store = FAISS.from_documents(docs, embeddings)
-    vector_store.save_local(db_path)
+    _vector_store_instance = FAISS.from_documents(docs, embeddings)
+    _vector_store_instance.save_local(db_path)
     print(f"Vector store created and saved to {db_path}")
-    return vector_store
+    return _vector_store_instance
 
 def get_vector_store(db_path=DEFAULT_DB_PATH):
     """
     Loads the FAISS index from local storage, or creates it if missing.
     """
+    global _vector_store_instance
+    if _vector_store_instance is not None:
+        return _vector_store_instance
+
     embeddings = get_embeddings()
     if os.path.exists(db_path):
-        return FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
+        _vector_store_instance = FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
+        return _vector_store_instance
     else:
         print(f"Index {db_path} not found. Creating it automatically...")
         return create_vector_store(db_path=db_path)
