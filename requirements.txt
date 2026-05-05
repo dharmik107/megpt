@@ -6,8 +6,6 @@ faiss-cpu
 python-dotenv
 sentence-transformers
 groq
-streamlit
-python-docx
 fastapi
 uvicorn
 python-multipart
