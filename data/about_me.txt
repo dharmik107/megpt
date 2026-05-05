@@ -1,0 +1,59 @@
+# Professional and Personal Profile of Dharmik Pansuriya
+
+## Personal Overview
+- **Full Name**: Dharmik R. Pansuriya
+- **Date of Birth**: 15th August, 2005
+- **Current Location**: Ahmedabad, Gujarat
+- **Permanent Address**: At. Junabadalpur, Ta. Kunkavav, Dist. Amreli, Gujarat
+- **Contact Info**: [dharmikpansuriya107@gmail.com](mailto:dharmikpansuriya107@gmail.com)
+- **GitHub**: [github.com/dharmik107](https://github.com/dharmik107)
+- **LinkedIn**: [linkedin.com/in/dharmik-pansuriya](https://www.linkedin.com/in/dharmik-pansuriya)
+- **Spoken Languages**: Gujarati, Hindi, English
+- **Current Status**: Actively seeking internships or entry-level opportunities in AI Engineering and Generative AI.
+- **Passions**: Sports, singing, playing musical instruments, listening to music, and travelling.
+
+## Family Background
+- **Father**: Rameshbhai Pansuriya (Occupation: Farmer)
+- **Mother**: Kailashben Pansuriya (Occupation: Housewife)
+
+## Educational Journey
+- **B.Sc. in Information Technology**: Maharaja Krishnakumarsinhji Bhavnagar University (July 2022 – April 2025)
+    - **Achievement**: Gold Medalist with Grade A+.
+- **Higher Secondary Certificate (HSC)**: Gujarat Board, Shree Nalanda Vidhyalaya, Derdi (Kum)
+    - **Result**: 76% (March 2022)
+- **Secondary School Certificate (SSC)**: Gujarat Board
+    - **Result**: 75%
+- **Primary Education**: Shree Nalanda Vidhayalay, Derdi (Kum)
+
+## Technical Skills
+- **Programming & APIs**: Python, SQL, FastAPI
+- **Generative AI & LLMs**: Hugging Face, Prompt Engineering, Retrieval-Augmented Generation (RAG)
+- **Agentic & LLM Frameworks**: LangChain, LangGraph, CrewAI, Microsoft AutoGen
+- **Vector Databases**: FAISS, ChromaDB, Pinecone, Weaviate, Qdrant
+- **Version Control**: Git, GitHub
+- **Soft Skills**: Problem Solving, Research, Collaboration, Fast Learner
+
+## Key Projects
+### 1. HireNova: AI-Powered Recruitment Automation Platform
+- Built an AI-powered recruitment automation platform using multi-agent workflows.
+- Generates technical job descriptions and evaluates candidate resumes.
+- **Tech Stack**: Python, FastAPI, CrewAI, Groq LLM, Streamlit, NeonDB, SQLAlchemy, PyPDF2.
+- **GitHub**: [github.com/dharmik107/HireNova](https://github.com/dharmik107/HireNova)
+
+### 2. RepoPilot: Agentic RAG System for Codebase Navigation
+- Developed an agentic RAG-based tool that indexes and navigates large code repositories.
+- Implemented metadata indexing and universal file processing using LangGraph multi-agent workflows.
+- **Tech Stack**: Python, FastAPI, LangGraph, LangChain, Pinecone, NeonDB, Groq LLM.
+- **GitHub**: [github.com/dharmik107/repopilot](https://github.com/dharmik107/repopilot)
+
+### 3. MeGPT: Personal AI Agent Project
+- Developed a personalized AI assistant that functions as a digital clone using RAG.
+- Integrates personal data embeddings with an interactive multi-agent backend.
+- **Tech Stack**: Python, FastAPI, LangChain, ChromaDB/FAISS, React.
+
+
+## Certifications
+- **GenAI Certification Bootcamp 2.0**: Completed a comprehensive bootcamp focused on Generative AI technologies and implementation.
+
+## Professional Mission
+Dharmik is an aspiring AI Engineer focused on building intelligent, autonomous systems. He leverages cutting-edge frameworks like AutoGen and LangGraph to create tools that solve real-world problems through advanced RAG and multi-agent collaboration.
