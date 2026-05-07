@@ -1,8 +1,12 @@
 import os
 import asyncio
+import logging
 from dotenv import load_dotenv
 from src.vector_store import query_vector_store
 from langchain_groq import ChatGroq
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -28,7 +32,7 @@ async def run_rag_chat_async(user_query, history=None):
     if history is None:
         history = ChatMessageHistory()
 
-    print(f"\n[System] Original Query: {user_query}")
+    logger.info(f"Original Query: {user_query}")
     
     # 1. & 1.5. Reformulate and Classify in ONE call (Major speedup)
     search_query = user_query
@@ -68,20 +72,20 @@ async def run_rag_chat_async(user_query, history=None):
                 category = line.split(":", 1)[1].strip().upper()
         
         is_personal = "GENERAL" not in category
-        print(f"[System] Optimized Routing -> Category: {category}, Query: {search_query}")
+        logger.info(f"Optimized Routing -> Category: {category}, Query: {search_query}")
         
     except Exception as e:
-        print(f"[System Warning] Optimized routing failed: {e}")
+        logger.warning(f"Optimized routing failed: {e}")
         is_personal = True
 
     # 2. Retrieve Info (Conditional)
     context = ""
     if is_personal:
-        print(f"[System] Searching Vector DB for: {search_query}")
+        logger.info(f"Searching Vector DB for: {search_query}")
         # Run synchronous vector db call in a thread to avoid blocking event loop
         context = await asyncio.to_thread(query_vector_store, search_query, k=5)
     else:
-        print(f"[System] General Knowledge Query - Bypassing vector search.")
+        logger.info(f"General Knowledge Query - Bypassing vector search.")
 
     # 3. Generate Final Answer
     from datetime import datetime
@@ -148,6 +152,7 @@ async def run_rag_chat_async(user_query, history=None):
         
         return response_content
     except Exception as e:
+        logger.error(f"Error generating answer: {e}", exc_info=True)
         return f"An error occurred while generating the answer: {e}"
 
 if __name__ == "__main__":

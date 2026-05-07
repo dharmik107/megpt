@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+import logging
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from src.agents import run_rag_chat_async
@@ -10,22 +11,33 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize Vector Store and Models on startup to prevent cold-starts
     from src.vector_store import init_vector_store
-    print("[System] Initializing Vector Store on Startup...")
+    logger.info("Initializing Vector Store on Startup...")
     init_vector_store()
     yield
-    print("[System] Shutting down...")
+    logger.info("Shutting down...")
 
 app = FastAPI(title="MeGPT API", lifespan=lifespan)
 
-# Enable CORS for React frontend
+# Enable CORS for React frontend securely
+origins_env = os.environ.get("ALLOWED_ORIGINS")
+if origins_env:
+    origins = [origin.strip() for origin in origins_env.split(",")]
+    allow_credentials = True
+else:
+    origins = ["*"]
+    allow_credentials = False
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify the actual origin
-    allow_credentials=True,
+    allow_origins=origins,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -57,7 +69,8 @@ async def chat(request: ChatRequest):
         
         return ChatResponse(response=response)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error processing chat request: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @app.get("/api/health")
 async def health():

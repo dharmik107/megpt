@@ -1,4 +1,22 @@
+import socket
+
+import socket
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# DNS Monkeypatch for restricted environments
+if os.environ.get("USE_LOCAL_DNS_PATCH", "").lower() == "true":
+    logger.warning("DNS Monkeypatch is ACTIVE. Bypassing DNS for Qdrant.")
+    _original_getaddrinfo = socket.getaddrinfo
+    def _patched_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+        if host == "b5f4c545-a662-44e9-bcd4-eae1dc547cba.sa-east-1-0.aws.cloud.qdrant.io":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('52.67.45.23', port))]
+        return _original_getaddrinfo(host, port, family, type, proto, flags)
+    socket.getaddrinfo = _patched_getaddrinfo
+
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -66,17 +84,17 @@ def init_vector_store(file_path=DEFAULT_FILE_PATH):
         count_result = client.count(collection_name=COLLECTION_NAME)
         if count_result.count == 0:
             if not os.path.exists(file_path):
-                print(f"[Warning] Source file {file_path} not found. Vector DB is empty.")
+                logger.warning(f"Source file {file_path} not found. Vector DB is empty.")
             else:
-                print(f"Index {COLLECTION_NAME} empty. Populating...")
+                logger.info(f"Index {COLLECTION_NAME} empty. Populating...")
                 loader = TextLoader(file_path)
                 documents = loader.load()
                 text_splitter = CharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
                 docs = text_splitter.split_documents(documents)
                 _vector_store_instance.add_documents(docs)
-                print(f"Vector store populated in collection {COLLECTION_NAME}")
+                logger.info(f"Vector store populated in collection {COLLECTION_NAME}")
     except Exception as e:
-        print(f"Error checking/populating collection: {e}")
+        logger.error(f"Error checking/populating collection: {e}")
 
     return _vector_store_instance
 
