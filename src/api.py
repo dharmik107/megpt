@@ -3,14 +3,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-from src.agents import run_rag_chat
+from src.agents import run_rag_chat_async
 from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain_core.messages import HumanMessage, AIMessage
 
 load_dotenv()
 
-app = FastAPI(title="MeGPT API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize Vector Store and Models on startup to prevent cold-starts
+    from src.vector_store import init_vector_store
+    print("[System] Initializing Vector Store on Startup...")
+    init_vector_store()
+    yield
+    print("[System] Shutting down...")
+
+app = FastAPI(title="MeGPT API", lifespan=lifespan)
 
 # Enable CORS for React frontend
 app.add_middleware(
@@ -43,8 +52,8 @@ async def chat(request: ChatRequest):
             elif msg.role == "assistant":
                 history.add_ai_message(msg.content)
         
-        # Run the RAG chat
-        response = run_rag_chat(request.message, history)
+        # Run the RAG chat asynchronously
+        response = await run_rag_chat_async(request.message, history)
         
         return ChatResponse(response=response)
     except Exception as e:

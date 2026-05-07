@@ -1,4 +1,5 @@
 import os
+import asyncio
 from dotenv import load_dotenv
 from src.vector_store import query_vector_store
 from langchain_groq import ChatGroq
@@ -16,7 +17,7 @@ llm = ChatGroq(
     temperature=0.0
 )
 
-def run_rag_chat(user_query, history=None):
+async def run_rag_chat_async(user_query, history=None):
     """
     Main entry point for the chat logic. Optimized for speed and supports memory.
     """
@@ -56,7 +57,8 @@ def run_rag_chat(user_query, history=None):
         REFORMULATED_QUESTION: [standalone question]
         CATEGORY: [PERSONAL or GENERAL]"""
         
-        res = llm.invoke([HumanMessage(content=combined_prompt.strip())])
+        # Async call to prevent blocking event loop
+        res = await llm.ainvoke([HumanMessage(content=combined_prompt.strip())])
         lines = res.content.strip().split("\n")
         
         for line in lines:
@@ -76,7 +78,8 @@ def run_rag_chat(user_query, history=None):
     context = ""
     if is_personal:
         print(f"[System] Searching Vector DB for: {search_query}")
-        context = query_vector_store(search_query, k=5)
+        # Run synchronous vector db call in a thread to avoid blocking event loop
+        context = await asyncio.to_thread(query_vector_store, search_query, k=5)
     else:
         print(f"[System] General Knowledge Query - Bypassing vector search.")
 
@@ -135,7 +138,8 @@ def run_rag_chat(user_query, history=None):
         # Add current message
         messages.append(HumanMessage(content=human_message.strip()))
         
-        res = llm.invoke(messages)
+        # Async call to prevent blocking event loop
+        res = await llm.ainvoke(messages)
         response_content = res.content.strip()
         
         # Save current turn to history
@@ -146,9 +150,7 @@ def run_rag_chat(user_query, history=None):
     except Exception as e:
         return f"An error occurred while generating the answer: {e}"
 
-
-
 if __name__ == "__main__":
     # Test
     if get_api_key():
-        print(run_rag_chat("What is Dharmik's passion?"))
+        print(asyncio.run(run_rag_chat_async("What is Dharmik's passion?")))
