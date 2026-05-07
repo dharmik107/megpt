@@ -79,17 +79,7 @@ function App() {
         </div>
 
         <div className="sidebar-content">
-          <div className="sidebar-section">
-            <h4>Quick Stats</h4>
-            <div className="stat-card">
-              <span>Experience</span>
-              <strong>AI & GenAI</strong>
-            </div>
-            <div className="stat-card">
-              <span>Tech Stack</span>
-              <strong>React, Python, LLMs</strong>
-            </div>
-          </div>
+
 
           <div className="sidebar-section">
             <h4>Find Dharmik</h4>
