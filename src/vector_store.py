@@ -2,30 +2,19 @@ import os
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, VectorParams
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEFAULT_FILE_PATH = os.path.join(BASE_DIR, "data", "about_me.txt")
-DEFAULT_DB_PATH = os.path.join(BASE_DIR, "faiss_index")
+COLLECTION_NAME = "megpt_about_me"
 
-def create_vector_store(file_path=DEFAULT_FILE_PATH, db_path=DEFAULT_DB_PATH):
-    """
-    Loads text, creates embeddings, and saves to a FAISS index.
-    """
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Source file {file_path} not found.")
-
-    # Load and split documents
-    loader = TextLoader(file_path)
-    documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
-    docs = text_splitter.split_documents(documents)
-
-# Cache embeddings and vector store globally
 _embeddings_instance = None
+_qdrant_client_instance = None
 _vector_store_instance = None
 
 def get_embeddings():
@@ -34,50 +23,74 @@ def get_embeddings():
         _embeddings_instance = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     return _embeddings_instance
 
-def create_vector_store(file_path=DEFAULT_FILE_PATH, db_path=DEFAULT_DB_PATH):
+def get_qdrant_client():
+    global _qdrant_client_instance
+    if _qdrant_client_instance is None:
+        _qdrant_client_instance = QdrantClient(
+            url=os.environ.get("QDRANT_URL"),
+            api_key=os.environ.get("QDRANT_API_KEY")
+        )
+    return _qdrant_client_instance
+
+def init_vector_store(file_path=DEFAULT_FILE_PATH):
     """
-    Loads text, creates embeddings, and saves to a FAISS index.
-    """
-    global _vector_store_instance
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Source file {file_path} not found.")
-
-    # Load and split documents
-    loader = TextLoader(file_path)
-    documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
-    docs = text_splitter.split_documents(documents)
-
-    # Use cached embeddings
-    embeddings = get_embeddings()
-
-    # Create and save FAISS index
-    _vector_store_instance = FAISS.from_documents(docs, embeddings)
-    _vector_store_instance.save_local(db_path)
-    print(f"Vector store created and saved to {db_path}")
-    return _vector_store_instance
-
-def get_vector_store(db_path=DEFAULT_DB_PATH):
-    """
-    Loads the FAISS index from local storage, or creates it if missing.
+    Initializes Qdrant connection, checks if collection exists and has data.
+    If not, it loads the document and upserts it.
     """
     global _vector_store_instance
     if _vector_store_instance is not None:
         return _vector_store_instance
 
+    client = get_qdrant_client()
     embeddings = get_embeddings()
-    if os.path.exists(db_path):
-        _vector_store_instance = FAISS.load_local(db_path, embeddings, allow_dangerous_deserialization=True)
-        return _vector_store_instance
-    else:
-        print(f"Index {db_path} not found. Creating it automatically...")
-        return create_vector_store(db_path=db_path)
 
-def query_vector_store(query, db_path=DEFAULT_DB_PATH, k=4):
+    # Check if collection exists
+    try:
+        client.get_collection(collection_name=COLLECTION_NAME)
+    except Exception:
+        # Create collection if it doesn't exist. all-MiniLM-L6-v2 has 384 dimensions.
+        client.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+        )
+    
+    # Initialize the VectorStore wrapper
+    _vector_store_instance = QdrantVectorStore(
+        client=client,
+        collection_name=COLLECTION_NAME,
+        embedding=embeddings
+    )
+
+    # Check if we need to load data
+    try:
+        count_result = client.count(collection_name=COLLECTION_NAME)
+        if count_result.count == 0:
+            if not os.path.exists(file_path):
+                print(f"[Warning] Source file {file_path} not found. Vector DB is empty.")
+            else:
+                print(f"Index {COLLECTION_NAME} empty. Populating...")
+                loader = TextLoader(file_path)
+                documents = loader.load()
+                text_splitter = CharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
+                docs = text_splitter.split_documents(documents)
+                _vector_store_instance.add_documents(docs)
+                print(f"Vector store populated in collection {COLLECTION_NAME}")
+    except Exception as e:
+        print(f"Error checking/populating collection: {e}")
+
+    return _vector_store_instance
+
+def get_vector_store():
+    """
+    Returns the initialized Qdrant vector store wrapper.
+    """
+    return init_vector_store()
+
+def query_vector_store(query, k=4):
     """
     Queries the vector store for relevant documents.
     """
-    vector_store = get_vector_store(db_path)
+    vector_store = get_vector_store()
     if vector_store:
         docs = vector_store.similarity_search(query, k=k)
         return "\n".join([doc.page_content for doc in docs])
@@ -85,4 +98,4 @@ def query_vector_store(query, db_path=DEFAULT_DB_PATH, k=4):
 
 if __name__ == "__main__":
     # Test creation
-    create_vector_store()
+    init_vector_store()
