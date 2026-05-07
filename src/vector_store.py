@@ -19,7 +19,7 @@ if os.environ.get("USE_LOCAL_DNS_PATCH", "").lower() == "true":
 
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import CharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
@@ -29,7 +29,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEFAULT_FILE_PATH = os.path.join(BASE_DIR, "data", "about_me.txt")
-COLLECTION_NAME = "megpt_about_me"
+COLLECTION_NAME = "megpt_about_me_v2"
 
 _embeddings_instance = None
 _qdrant_client_instance = None
@@ -38,7 +38,9 @@ _vector_store_instance = None
 def get_embeddings():
     global _embeddings_instance
     if _embeddings_instance is None:
-        _embeddings_instance = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        # FastEmbed is a lightweight, ONNX-based embedding library that does not require PyTorch.
+        # This drastically reduces RAM usage (crucial for free tier deployments like Render).
+        _embeddings_instance = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
     return _embeddings_instance
 
 def get_qdrant_client():
