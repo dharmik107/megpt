@@ -34,103 +34,75 @@ async def run_rag_chat_async(user_query, history=None):
 
     logger.info(f"Original Query: {user_query}")
     
-    # 1. & 1.5. Reformulate and Classify in ONE call (Major speedup)
-    search_query = user_query
-    category = "PERSONAL"
     previous_messages = history.messages[-10:] # Last 5 turns approx
+    search_query = user_query
     
-    # Build history context
-    history_text = ""
+    # 1. Reformulate ONLY if there is history
     if previous_messages:
-        for msg in previous_messages:
+        # Build history context
+        history_text = ""
+        for msg in previous_messages[-4:]: # Use last 2 turns for context to save tokens
             role = "User" if isinstance(msg, HumanMessage) else "Assistant"
             history_text += f"{role}: {msg.content}\n"
 
-    try:
-        combined_prompt = f"""Analyze the following conversation history and the new question.
-        
-        1. **Reformulate**: Rephrase the question to be standalone (resolve pronouns like 'it', 'he'). If independent, keep it as-is.
-        2. **Classify**: Is this about Dharmik Pansuriya (skills, projects, background) -> 'PERSONAL' or a general topic -> 'GENERAL'?
-        
-        History:
-        {history_text if history_text else "None"}
-        
-        New Question: {user_query}
-        
-        Response format:
-        REFORMULATED_QUESTION: [standalone question]
-        CATEGORY: [PERSONAL or GENERAL]"""
-        
-        # Async call to prevent blocking event loop
-        res = await llm.ainvoke([HumanMessage(content=combined_prompt.strip())])
-        lines = res.content.strip().split("\n")
-        
-        for line in lines:
-            if "REFORMULATED_QUESTION:" in line.upper():
-                search_query = line.split(":", 1)[1].strip()
-            if "CATEGORY:" in line.upper():
-                category = line.split(":", 1)[1].strip().upper()
-        
-        is_personal = "GENERAL" not in category
-        logger.info(f"Optimized Routing -> Category: {category}, Query: {search_query}")
-        
-    except Exception as e:
-        logger.warning(f"Optimized routing failed: {e}")
-        is_personal = True
+        try:
+            reformulate_prompt = f"""Analyze the conversation history and rewrite the new question to be a standalone question (resolve pronouns like 'it', 'he'). If it is already independent, keep it as-is. DO NOT answer the question, just output the reformulated question.
+            
+            History:
+            {history_text}
+            
+            New Question: {user_query}
+            
+            Reformulated Question:"""
+            
+            # Async call to prevent blocking event loop
+            res = await llm.ainvoke([HumanMessage(content=reformulate_prompt.strip())])
+            search_query = res.content.strip()
+            
+            # Clean up the output in case the LLM was chatty
+            if ":" in search_query and len(search_query.split(":")[0]) < 25:
+                search_query = search_query.split(":", 1)[1].strip()
+                
+            logger.info(f"Reformulated Query: {search_query}")
+            
+        except Exception as e:
+            logger.warning(f"Reformulation failed: {e}")
 
-    # 2. Retrieve Info (Conditional)
-    context = ""
-    if is_personal:
-        logger.info(f"Searching Vector DB for: {search_query}")
-        # Run synchronous vector db call in a thread to avoid blocking event loop
-        context = await asyncio.to_thread(query_vector_store, search_query, k=5)
-    else:
-        logger.info(f"General Knowledge Query - Bypassing vector search.")
+    # 2. Retrieve Info ALWAYS
+    logger.info(f"Searching Vector DB for: {search_query}")
+    # Run synchronous vector db call in a thread to avoid blocking event loop
+    context = await asyncio.to_thread(query_vector_store, search_query, k=5)
 
     # 3. Generate Final Answer
     from datetime import datetime
     current_date = datetime.now().strftime("%B %d, %Y")
     
-    if is_personal:
-        system_message = f"""
-        You are MeGPT, the digital assistant for Dharmik Pansuriya. 
-        Your goal is to provide **short, on-point, and clean** answers based ONLY on the provided context.
+    system_message = f"""
+    You are MeGPT, the digital assistant for Dharmik Pansuriya. 
+    Your goal is to provide **short, on-point, and clean** answers.
 
-        RULES:
-        1. **Be Concise**: Never use 10 words if 5 will do. Avoid fluff, unnecessary introductions, or concluding summaries.
-        2. **On-Point**: Answer ONLY what is asked. Do not provide extra information or unsolicited recommendations.
-        3. **Format Cleanly**: Use bullet points for lists and bolding for key terms. Keep it readable.
-        4. **Source Only**: Use only the provided context. If not found, say you don't know.
-        5. **No Meta-Talk**: Do not mention "context", "database", or "cutoffs".
-        6. **Persona**: Stay professional and efficient.
-        7. **Accurate Age**: If mentioning his age, ALWAYS calculate it accurately using his Date of Birth (from context) and Today's Date. Do not guess it.
+    RULES:
+    1. **Be Concise**: Never use 10 words if 5 will do. Avoid fluff, unnecessary introductions, or concluding summaries.
+    2. **On-Point**: Answer ONLY what is asked. Do not provide extra information or unsolicited recommendations.
+    3. **Format Cleanly**: Use bullet points for lists and bolding for key terms. Keep it readable.
+    4. **Context Usage**: Use the provided context IF it is relevant to the user's question about Dharmik. If the question is a general knowledge question (e.g., 'what is python?'), ignore the context and answer normally using your general knowledge.
+    5. **No Meta-Talk**: Do not mention "context", "database", or "cutoffs". If you don't know something about Dharmik, just say you don't know.
+    6. **Persona**: Stay professional and efficient.
+    7. **Accurate Age**: If mentioning his age, ALWAYS calculate it accurately using his Date of Birth (from context) and Today's Date. Do not guess it.
 
-        Today's Date: {current_date}
-        """
+    Today's Date: {current_date}
+    """
 
-        human_message = f"""
-        Context Info:
-        ---
-        {context}
-        ---
+    human_message = f"""
+    Context Info:
+    ---
+    {context}
+    ---
 
-        User Question: {search_query}
+    User Question: {search_query}
 
-        Provide a short, direct response:
-        """
-    else:
-        system_message = f"""
-        You are MeGPT, a helpful and efficient AI assistant. 
-        Answer the question using your general knowledge accurately and concisely.
-
-        Today's Date: {current_date}
-        """
-
-        human_message = f"""
-        User Question: {search_query}
-
-        Provide a helpful and direct response:
-        """
+    Provide a short, direct response:
+    """
     
     try:
         # Construct messages for ChatGroq including history
